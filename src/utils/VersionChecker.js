@@ -2,7 +2,7 @@
  * File: src/utils/VersionChecker.js
  * Description: Checks for new versions by querying GitHub Tags API
  *
- * Author: iBenzene, bbbugg
+ * Author: xjc
  */
 
 const axios = require("axios");
@@ -14,7 +14,7 @@ const axios = require("axios");
 class VersionChecker {
     constructor(logger) {
         this.logger = logger;
-        this.repoOwner = "iBUHub";
+        this.repoOwner = "ooj324";
         this.repoName = "AIStudioToAPI";
     }
 
@@ -66,7 +66,7 @@ class VersionChecker {
      * @returns {Promise<boolean>}
      */
     async checkDockerImageExists(tag) {
-        const image = "ibuhub/aistudio-to-api";
+        const image = "ooj324/aistudio-to-api";
         const registry = "ghcr.io";
         const manifestUrl = `https://${registry}/v2/${image}/manifests/${tag}`;
 

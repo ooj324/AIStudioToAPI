@@ -5,7 +5,7 @@
 ## 快速开始
 
 ```bash
-git clone https://github.com/iBUHub/AIStudioToAPI.git
+git clone 
 cd AIStudioToAPI
 npm run setup-auth   # 浏览器自动登录，保存认证凭据
 cp .env.example .env # 按需修改配置
