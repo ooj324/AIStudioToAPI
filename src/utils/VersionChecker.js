@@ -15,7 +15,7 @@ class VersionChecker {
     constructor(logger) {
         this.logger = logger;
         this.repoOwner = "ooj324";
-        this.repoName = "AIStudioToAPI";
+        this.repoName = "ASTA";
     }
 
     /**
@@ -61,13 +61,13 @@ class VersionChecker {
     }
 
     /**
-     * Check if Docker image exists on GHCR
+     * Check if Docker image exists on Docker Hub
      * @param {string} tag - Tag to check
      * @returns {Promise<boolean>}
      */
     async checkDockerImageExists(tag) {
-        const image = "ooj324/aistudio-to-api";
-        const registry = "ghcr.io";
+        const image = "jonybolodon273/asta";
+        const registry = "registry-1.docker.io";
         const manifestUrl = `https://${registry}/v2/${image}/manifests/${tag}`;
 
         try {
@@ -129,7 +129,7 @@ class VersionChecker {
             const response = await axios.get(`https://api.github.com/repos/${this.repoOwner}/${this.repoName}/tags`, {
                 headers: {
                     Accept: "application/vnd.github.v3+json",
-                    "User-Agent": "AIStudioToAPI-VersionChecker",
+                    "User-Agent": "ASTA-VersionChecker",
                 },
                 timeout: 10000,
             });

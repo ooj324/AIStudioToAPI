@@ -8,6 +8,8 @@
 const net = require("net");
 const { spawn } = require("child_process");
 
+const { getResinClient, ResinClient } = require("../utils/ResinClient");
+
 /**
  * CreateAuth Manager
  * Handles VNC session creation and auth file generation
@@ -334,7 +336,7 @@ class CreateAuth {
             checkAborted();
 
             this.logger.info("[VNC] Launching browser for VNC session...");
-            const { browser, context } = await this._runWithSignal(
+            const { browser, context, resinAccount } = await this._runWithSignal(
                 this.serverSystem.browserManager.launchBrowserForVNC({
                     env: { DISPLAY: display },
                     isMobile,
@@ -343,6 +345,7 @@ class CreateAuth {
             );
             sessionResources.browser = browser;
             sessionResources.context = context;
+            sessionResources.resinAccount = resinAccount || null;
 
             browser.once("disconnected", () => {
                 this.logger.warn("[VNC] Browser disconnected. Triggering cleanup.");
@@ -491,12 +494,27 @@ class CreateAuth {
 
         try {
             const storageState = await context.storageState();
+            const tempResinAccount = sessionRef.resinAccount || null;
+            const stableResinAccount = ResinClient.resolveAccountFromAuth({ accountName }) || tempResinAccount;
             const authData = { ...storageState, accountName };
+            if (stableResinAccount) {
+                authData.resinAccount = stableResinAccount;
+            }
 
             const { index: nextAuthIndex, accountName: usedAccountName } =
                 await this.serverSystem.authSource.addAuth(authData);
 
-            this.logger.info(`[VNC] Saved new auth: auth-${nextAuthIndex}.json (account: ${usedAccountName || "unknown"})`);
+            this.logger.info(
+                `[VNC] Saved new auth: auth-${nextAuthIndex}.json (account: ${usedAccountName || "unknown"})`
+            );
+
+            if (tempResinAccount && stableResinAccount && tempResinAccount !== stableResinAccount) {
+                const resin = getResinClient(this.logger);
+                // Best-effort lease inheritance — don't block the response.
+                resin.inheritLease(tempResinAccount, stableResinAccount).catch(err => {
+                    this.logger.warn(`[VNC] Resin inheritLease threw: ${err?.message || err}`);
+                });
+            }
 
             await this.serverSystem.authSource.reloadAuthSources();
 

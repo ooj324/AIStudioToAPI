@@ -11,6 +11,7 @@ const { firefox, devices } = require("playwright");
 const os = require("os");
 
 const { parseProxyFromEnv } = require("../utils/ProxyUtils");
+const { getResinClient, ResinClient } = require("../utils/ResinClient");
 const {
     AuthExpiredError,
     isAuthExpiredError,
@@ -1301,9 +1302,20 @@ class BrowserManager {
             throw new Error(`Browser executable not found at path: ${this.browserExecutablePath}`);
         }
 
-        const proxyConfig = parseProxyFromEnv();
-        if (proxyConfig) {
-            this.logger.info(`[VNC] 🌐 Using proxy: ${proxyConfig.server}`);
+        const resin = getResinClient(this.logger);
+        let resinAccount = null;
+        let proxyConfig;
+        if (resin.isEnabled()) {
+            resinAccount = ResinClient.generateTempIdentity("vnc-temp");
+            proxyConfig = resin.getForwardProxyForAccount(resinAccount);
+            this.logger.info(
+                `[VNC] 🌐 Routing through Resin with TempIdentity "${resinAccount}". Lease will be inherited after login.`
+            );
+        } else {
+            proxyConfig = parseProxyFromEnv();
+            if (proxyConfig) {
+                this.logger.info(`[VNC] 🌐 Using proxy: ${proxyConfig.server}`);
+            }
         }
 
         // This browser instance is temporary and specific to the VNC session.
@@ -1343,8 +1355,10 @@ class BrowserManager {
         );
         this.logger.info("✅ [VNC] VNC browser context successfully created.");
 
-        // Return both the browser and context so the caller can manage their lifecycle.
-        return { browser: vncBrowser, context };
+        // Return browser/context plus the Resin TempIdentity (if any) so the
+        // caller can later call resin.inheritLease(resinAccount, stableEmail)
+        // once login completes and the account email is known.
+        return { browser: vncBrowser, context, resinAccount };
     }
 
     /**
@@ -1460,8 +1474,18 @@ class BrowserManager {
     async _ensureBrowser() {
         if (this.browser) return;
 
-        const proxyConfig = parseProxyFromEnv();
+        const resin = getResinClient(this.logger);
+        // When Resin is enabled, per-context proxies carry the per-account
+        // identity. Browser-level proxy is intentionally left unset because it
+        // cannot encode an account, and Playwright's per-context proxy
+        // overrides browser-level when both are present.
+        const proxyConfig = resin.isEnabled() ? null : parseProxyFromEnv();
         this.logger.info("🚀 [Browser] Launching main browser instance...");
+        if (resin.isEnabled()) {
+            this.logger.info(
+                `🚀 [Browser] Resin enabled — per-context forward proxy will route each account through "${resin.getPlatform()}".`
+            );
+        }
         if (!fs.existsSync(this.browserExecutablePath)) {
             this._currentAuthIndex = -1;
             throw new Error(`Browser executable not found at path: ${this.browserExecutablePath}`);
@@ -1855,6 +1879,39 @@ class BrowserManager {
     }
 
     /**
+     * Build a Playwright proxy config for a specific auth's context.
+     * When Resin is enabled, every account is routed through Resin's forward
+     * proxy with credentials encoding the account identity (Platform.Account).
+     * Falls back to HTTP_PROXY-based config when Resin is not configured.
+     *
+     * @param {number} authIndex
+     * @param {object} authData storage state object loaded from authSource
+     * @returns {object|null} Playwright proxy config (server/username/password/bypass) or null
+     */
+    _buildContextProxyForAuth(authIndex, authData) {
+        const resin = getResinClient(this.logger);
+        if (!resin.isEnabled()) {
+            return parseProxyFromEnv();
+        }
+
+        let account = ResinClient.resolveAccountFromAuth(authData);
+        if (!account) {
+            // Backwards-compatible fallback for legacy auth files where the
+            // accountName is "unknown" or missing — synthesize a stable but
+            // index-derived identifier so this auth still gets a sticky lease.
+            // Note: derived from index, so two unknown auths at different
+            // indices route differently, but renumbering will reroute. Users
+            // should re-run the auth flow to capture an email when possible.
+            account = `unknown-auth-${authIndex}`;
+            this.logger.warn(
+                `[Resin] Auth #${authIndex} has no usable accountName/resinAccount; falling back to "${account}". Re-running setup-auth or VNC login is recommended for a stable email-based identity.`
+            );
+        }
+
+        return resin.getForwardProxyForAccount(account);
+    }
+
+    /**
      * Wait for a background context initialization to complete
      * @param {number} authIndex - The auth index to wait for
      * @param {number} timeoutMs - Timeout in milliseconds
@@ -1896,11 +1953,12 @@ class BrowserManager {
             // between concurrent init/reconnect operations on different accounts
             this._wsInitState.set(authIndex, { failed: false, success: false });
 
-            const proxyConfig = parseProxyFromEnv();
             const storageStateObject = this.authSource.getAuth(authIndex);
             if (!storageStateObject) {
                 throw new Error(`Failed to get or parse auth source for index ${authIndex}.`);
             }
+
+            const proxyConfig = this._buildContextProxyForAuth(authIndex, storageStateObject);
 
             // Viewport Randomization
             const randomWidth = 1920 + Math.floor(Math.random() * 50);

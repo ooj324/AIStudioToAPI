@@ -34,6 +34,7 @@ const VALIDATION_LINE_THRESHOLD = 200; // Validation line threshold
 const CONFIG_DIR = "configs/auth"; // Authentication files directory
 
 const { parseProxyFromEnv } = require("../../src/utils/ProxyUtils");
+const { getResinClient, ResinClient } = require("../../src/utils/ResinClient");
 
 /**
  * Ensures that the specified directory exists, creating it if it doesn't.
@@ -110,22 +111,36 @@ const getNextAuthIndex = () => {
         process.exit(1);
     }
 
-    const proxyConfig = parseProxyFromEnv();
-    if (proxyConfig) {
-        const bypassText = proxyConfig.bypass ? `, bypass=${proxyConfig.bypass}` : "";
+    const resin = getResinClient();
+    let resinAccount = null;
+    let proxyConfig;
+    if (resin.isEnabled()) {
+        resinAccount = ResinClient.generateTempIdentity("setup-auth");
+        proxyConfig = resin.getForwardProxyForAccount(resinAccount);
         console.log(
             getText(
-                `🌐  使用代理: ${proxyConfig.server}${bypassText}`,
-                `🌐  Using proxy: ${proxyConfig.server}${bypassText}`
+                `🌐  Resin 粘性代理已启用，本次登录使用临时身份 "${resinAccount}"，登录成功后将继承租约。`,
+                `🌐  Resin sticky proxy ENABLED. This login uses TempIdentity "${resinAccount}"; lease will be inherited after login.`
             )
         );
     } else {
-        console.log(
-            getText(
-                "🌐  未检测到代理环境变量 (HTTPS_PROXY/HTTP_PROXY/ALL_PROXY)。如需代理请在运行前设置。",
-                "🌐  No proxy env detected (HTTPS_PROXY/HTTP_PROXY/ALL_PROXY). Set it before running if needed."
-            )
-        );
+        proxyConfig = parseProxyFromEnv();
+        if (proxyConfig) {
+            const bypassText = proxyConfig.bypass ? `, bypass=${proxyConfig.bypass}` : "";
+            console.log(
+                getText(
+                    `🌐  使用代理: ${proxyConfig.server}${bypassText}`,
+                    `🌐  Using proxy: ${proxyConfig.server}${bypassText}`
+                )
+            );
+        } else {
+            console.log(
+                getText(
+                    "🌐  未检测到代理环境变量 (HTTPS_PROXY/HTTP_PROXY/ALL_PROXY)。如需代理请在运行前设置。",
+                    "🌐  No proxy env detected (HTTPS_PROXY/HTTP_PROXY/ALL_PROXY). Set it before running if needed."
+                )
+            );
+        }
     }
 
     const browser = await firefox.launch({
@@ -364,6 +379,12 @@ const getNextAuthIndex = () => {
     console.log(getText("正在获取并验证登录状态...", "Retrieving and validating login status..."));
     const currentState = await context.storageState();
     currentState.accountName = accountName;
+    if (resinAccount) {
+        // Persist the stable Resin account chosen for this auth so future
+        // BrowserManager._initializeContext calls keep using the same identity.
+        const stable = ResinClient.resolveAccountFromAuth({ accountName }) || resinAccount;
+        currentState.resinAccount = stable;
+    }
     const prettyStateString = JSON.stringify(currentState, null, 2);
     const lineCount = prettyStateString.split("\n").length;
 
@@ -385,6 +406,28 @@ const getNextAuthIndex = () => {
                 `   📄 Authentication file saved to: ${path.join(CONFIG_DIR, authFileName)}`
             )
         );
+
+        if (resinAccount && currentState.resinAccount && currentState.resinAccount !== resinAccount) {
+            // Best-effort: migrate the IP lease from the TempIdentity used
+            // during login to the stable account identifier so subsequent
+            // requests for this account land on the same egress IP.
+            const inherited = await resin.inheritLease(resinAccount, currentState.resinAccount);
+            if (inherited) {
+                console.log(
+                    getText(
+                        `   🔁 Resin 租约已从 "${resinAccount}" 继承到 "${currentState.resinAccount}"。`,
+                        `   🔁 Resin lease inherited: "${resinAccount}" -> "${currentState.resinAccount}".`
+                    )
+                );
+            } else {
+                console.warn(
+                    getText(
+                        `   ⚠️  Resin 租约继承失败，账号 "${currentState.resinAccount}" 后续请求将不会绑定到登录时的 IP。`,
+                        `   ⚠️  Resin lease inheritance failed; subsequent requests for "${currentState.resinAccount}" may use a different egress IP.`
+                    )
+                );
+            }
+        }
     } else {
         console.log(
             getText(

@@ -1,4 +1,4 @@
-# AIStudioToAPI
+# ASTA
 
 将 Google AI Studio 网页端封装为兼容 OpenAI、Gemini、Anthropic API 的代理服务。
 
@@ -6,7 +6,7 @@
 
 ```bash
 git clone 
-cd AIStudioToAPI
+cd ASTA
 npm run setup-auth   # 浏览器自动登录，保存认证凭据
 cp .env.example .env # 按需修改配置
 npm start            # 启动服务，默认 http://localhost:7860

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AIStudioToAPI is a proxy server that wraps Google AI Studio's web interface and exposes it as API endpoints compatible with OpenAI, Gemini, and Anthropic API formats. The system uses browser automation (Playwright with Camoufox/Firefox) to interact with AI Studio's web interface and translates API requests into browser interactions.
+ASTA is a proxy server that wraps Google AI Studio's web interface and exposes it as API endpoints compatible with OpenAI, Gemini, and Anthropic API formats. The system uses browser automation (Playwright with Camoufox/Firefox) to interact with AI Studio's web interface and translates API requests into browser interactions.
 
 ## Common Commands
 
@@ -142,7 +142,8 @@ Key variables (see `.env.example` for full list):
 - `SWITCH_ON_USES`: Auto-switch after N requests (default: 40)
 - `FAILURE_THRESHOLD`: Switch after N consecutive failures (default: 3)
 - `IMMEDIATE_SWITCH_STATUS_CODES`: Status codes triggering immediate switch (default: 429,503)
-- `HTTP_PROXY`/`HTTPS_PROXY`: Proxy configuration for Google services
+- `HTTP_PROXY`/`HTTPS_PROXY`: Proxy configuration for Google services (used only when Resin is disabled)
+- `RESIN_URL` / `RESIN_PLATFORM_NAME`: Enable Resin sticky proxy pool (see "Resin Sticky Proxy" below)
 - `CAMOUFOX_EXECUTABLE_PATH`: Custom browser executable path
 - `MAX_CONTEXTS`: Maximum number of accounts logged in simultaneously for faster switching (default: 1, memory usage: ~700MB per account)
 - `LOG_LEVEL`: Set to "DEBUG" for verbose logging
@@ -184,6 +185,28 @@ Edit `configs/models.json` to customize available models and their settings.
 
 - **Real streaming**: True SSE streaming from AI Studio
 - **Fake streaming**: Buffer complete response, then stream to client
+
+### Resin Sticky Proxy
+
+When `RESIN_URL` and `RESIN_PLATFORM_NAME` are set, every account-specific
+browser context — including the saveAuth / VNC login flow — is routed through
+Resin's forward proxy. Resin identifies each business identity via the
+`Platform.Account` credential pair and pins a sticky egress IP per identity.
+
+- Implementation: `src/utils/ResinClient.js` (forward + reverse helpers, lease inheritance).
+- Where it's applied:
+  - `BrowserManager._initializeContext` resolves the auth's stable account
+    (email preferred, `resinAccount` field as override) and passes it as the
+    Playwright per-context `proxy` option. HTTP_PROXY is ignored for these
+    contexts when Resin is enabled.
+  - `BrowserManager.launchBrowserForVNC` and `scripts/auth/saveAuth.js` use a
+    per-attempt TempIdentity (`temp-…` / `vnc-temp-…` / `setup-auth-…`) before
+    login; once the account email is extracted they call
+    `POST <RESIN_URL>/api/v1/<Platform>/actions/inherit-lease` to migrate the
+    lease to the stable identity and persist `resinAccount` into the auth file.
+- Non-Google outbound calls (`VersionChecker` → GitHub, `setupAuth.js` Camoufox
+  download, `FormatConverter` user image fetches) are deliberately NOT routed
+  through Resin — they are not account-specific.
 
 ## Development Notes
 

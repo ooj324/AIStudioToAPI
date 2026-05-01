@@ -8,6 +8,7 @@
 const fs = require("fs");
 const path = require("path");
 const { getProxySummaryFromEnv } = require("./ProxyUtils");
+const { getResinClient } = require("./ResinClient");
 
 /**
  * Configuration Loader Module
@@ -215,6 +216,13 @@ class ConfigLoader {
         } else {
             this.logger.info(`  Proxy: Enabled (${proxySummary.envKey})`);
             this.logger.info(`  Proxy Server: ${proxySummary.server}`);
+        }
+
+        const resin = getResinClient(this.logger);
+        if (resin.isEnabled()) {
+            this.logger.info(`  Resin Sticky Proxy: Enabled (platform="${resin.getPlatform()}")`);
+        } else {
+            this.logger.info("  Resin Sticky Proxy: Disabled");
         }
         this.logger.info("=============================================================");
     }

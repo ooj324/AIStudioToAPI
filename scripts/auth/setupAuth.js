@@ -209,7 +209,7 @@ const downloadFile = async (url, outFilePath) => {
                 {
                     headers: {
                         Accept: "*/*",
-                        "User-Agent": "aistudio-to-api setup-auth",
+                        "User-Agent": "asta setup-auth",
                     },
                 },
                 res => {
@@ -274,7 +274,7 @@ const fetchJson = async url =>
                 {
                     headers: {
                         Accept: "application/vnd.github+json",
-                        "User-Agent": "aistudio-to-api setup-auth",
+                        "User-Agent": "asta setup-auth",
                     },
                 },
                 res => {

@@ -948,8 +948,8 @@
                                     </svg>
                                     GitHub {{ t("repo") }}
                                 </span>
-                                <a href="https://github.com/ooj324/AIStudioToAPI" target="_blank" class="repo-link">
-                                    ooj324/AIStudioToAPI
+                                <a href="https://github.com/ooj324/ASTA" target="_blank" class="repo-link">
+                                    ooj324/ASTA
                                 </a>
                             </div>
                             <div class="status-item">
@@ -1025,9 +1025,7 @@
                                         :title="t('newVersionAvailable')"
                                     >
                                         <a
-                                            :href="
-                                                state.releaseUrl || 'https://github.com/ooj324/AIStudioToAPI/releases'
-                                            "
+                                            :href="state.releaseUrl || 'https://github.com/ooj324/ASTA/releases'"
                                             target="_blank"
                                             class="update-link"
                                         >
@@ -1035,9 +1033,7 @@
                                         </a>
                                         <a
                                             class="copy-icon"
-                                            :href="
-                                                state.releaseUrl || 'https://github.com/ooj324/AIStudioToAPI/releases'
-                                            "
+                                            :href="state.releaseUrl || 'https://github.com/ooj324/ASTA/releases'"
                                             target="_blank"
                                             style="color: inherit; display: inline-flex"
                                         >
@@ -1062,7 +1058,7 @@
                                     </span>
                                     <span v-else class="clickable-version" :title="t('viewRelease')">
                                         <a
-                                            href="https://github.com/ooj324/AIStudioToAPI/releases"
+                                            href="https://github.com/ooj324/ASTA/releases"
                                             target="_blank"
                                             style="color: inherit; text-decoration: none"
                                         >
@@ -1070,7 +1066,7 @@
                                         </a>
                                         <a
                                             class="copy-icon"
-                                            href="https://github.com/ooj324/AIStudioToAPI/releases"
+                                            href="https://github.com/ooj324/ASTA/releases"
                                             target="_blank"
                                             style="color: inherit; display: inline-flex"
                                         >
@@ -4876,7 +4872,7 @@ const downloadUsageStats = async () => {
             return;
         }
 
-        const filename = `AIStudioToAPI_usage-stats_${formatDownloadTimestamp()}.jsonl`;
+        const filename = `ASTA_usage-stats_${formatDownloadTimestamp()}.jsonl`;
         const a = document.createElement("a");
         a.href = "/api/usage-stats/download";
         a.download = filename;
@@ -4895,7 +4891,7 @@ const downloadCurrentLogs = () => {
     if (!state.logs) return;
 
     const blob = new Blob([state.logs], { type: "text/plain" });
-    const filename = `AIStudioToAPI_${formatDownloadTimestamp()}_${state.logCount}.log`;
+    const filename = `ASTA_${formatDownloadTimestamp()}_${state.logCount}.log`;
 
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
