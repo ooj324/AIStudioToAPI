@@ -3,10 +3,10 @@
 ## 远程仓库
 
 - `origin` = https://github.com/ooj324/ASTA.git (本仓库)
-- `upstream` = https://github.com/iBUHub/ASTA.git (上游)
+- `upstream` = https://github.com/iBUHub/AIStudioToAPI.git (上游)
 
 ```bash
-git remote add upstream https://github.com/iBUHub/ASTA.git  # 首次配置
+git remote add upstream https://github.com/iBUHub/AIStudioToAPI.git  # 首次配置
 ```
 
 ## 同步规则
