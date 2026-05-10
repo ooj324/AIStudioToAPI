@@ -814,8 +814,7 @@ class StatusRoutes {
                 // Parse content if it's a string
                 const parsedContent = typeof content === "string" ? JSON.parse(content) : content;
 
-                const { index: nextAuthIndex, accountName } =
-                    await this.serverSystem.authSource.addAuth(parsedContent);
+                const { index: nextAuthIndex, accountName } = await this.serverSystem.authSource.addAuth(parsedContent);
 
                 await this.serverSystem.authSource.reloadAuthSources();
 
@@ -825,7 +824,9 @@ class StatusRoutes {
                 });
 
                 const newFilename = `auth-${nextAuthIndex}.json`;
-                this.logger.info(`[WebUI] File uploaded via API: generated ${newFilename} (account: ${accountName || "unknown"})`);
+                this.logger.info(
+                    `[WebUI] File uploaded via API: generated ${newFilename} (account: ${accountName || "unknown"})`
+                );
                 res.status(200).json({ filename: newFilename, message: "File uploaded successfully" });
             } catch (error) {
                 this.logger.error(`[WebUI] Failed to write file: ${error.message}`);
@@ -858,8 +859,8 @@ class StatusRoutes {
                 // Map results to match expected format
                 const mappedResults = results.map((r, i) => ({
                     ...r,
-                    index: i,
                     filename: r.index !== null ? `auth-${r.index}.json` : null,
+                    index: i,
                 }));
 
                 const successCount = mappedResults.filter(r => r.success).length;

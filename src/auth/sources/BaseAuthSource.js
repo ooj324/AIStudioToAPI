@@ -24,15 +24,15 @@ class BaseAuthSource {
         throw new Error("_loadAllRecords() must be implemented by subclass");
     }
 
-    async _writeRecord(index, authData) {
+    async _writeRecord() {
         throw new Error("_writeRecord() must be implemented by subclass");
     }
 
-    async _deleteRecord(index) {
+    async _deleteRecord() {
         throw new Error("_deleteRecord() must be implemented by subclass");
     }
 
-    async _setExpiredFlag(index, expired) {
+    async _setExpiredFlag() {
         throw new Error("_setExpiredFlag() must be implemented by subclass");
     }
 
@@ -266,7 +266,7 @@ class BaseAuthSource {
         this._buildRotationIndices();
 
         this.logger.info(`[Auth] Added auth #${index} (account: ${accountName || "unknown"})`);
-        return { index, accountName };
+        return { accountName, index };
     }
 
     async addAuthBatch(authDataList) {
@@ -276,7 +276,7 @@ class BaseAuthSource {
                 const result = await this.addAuth(authDataList[i]);
                 results.push({ ...result, success: true });
             } catch (error) {
-                results.push({ index: null, accountName: null, success: false, error: error.message });
+                results.push({ accountName: null, error: error.message, index: null, success: false });
                 this.logger.error(`[Auth] Batch add failed for item ${i}: ${error.message}`);
             }
         }

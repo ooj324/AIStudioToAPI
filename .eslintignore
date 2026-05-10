@@ -8,6 +8,8 @@ node_modules/
 
 # Browser binary
 camoufox/
+camoufox-linux/
+camoufox-macos/
 
 # Temporary files
 tmp/

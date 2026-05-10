@@ -91,9 +91,7 @@ const t = (key, options) => {
 
 const isZh = computed(() => currentLang.value === "zh");
 const baseUrl = computed(() =>
-    isZh.value
-        ? "https://github.com/ooj324/ASTA"
-        : "https://github.com/ooj324/ASTA/blob/main/README_EN.md"
+    isZh.value ? "https://github.com/ooj324/ASTA" : "https://github.com/ooj324/ASTA/blob/main/README_EN.md"
 );
 
 const docUrl = computed(() => {

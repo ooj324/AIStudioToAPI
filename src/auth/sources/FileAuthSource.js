@@ -39,10 +39,10 @@ class FileAuthSource extends BaseAuthSource {
                 try {
                     const authData = JSON.parse(content);
                     records.push({
-                        index,
                         accountName: authData.accountName || null,
-                        expired: authData.expired === true,
                         data: authData,
+                        expired: authData.expired === true,
+                        index,
                     });
                 } catch (e) {
                     this.logger.warn(`[Auth] Skipping auth-${index}.json (parse error)`);

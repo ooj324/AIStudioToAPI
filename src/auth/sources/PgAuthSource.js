@@ -29,7 +29,7 @@ class PgAuthSource extends BaseAuthSource {
             this.logger.error(`[Auth:PG] Unexpected pool error: ${err.message}`);
         });
 
-        this.logger.info('[Auth] Using Postgres database for authentication.');
+        this.logger.info("[Auth] Using Postgres database for authentication.");
     }
 
     async initialize() {
@@ -63,10 +63,10 @@ class PgAuthSource extends BaseAuthSource {
             "SELECT index, account_name, expired, data FROM aistudio_auth ORDER BY index"
         );
         return result.rows.map(row => ({
-            index: row.index,
             accountName: row.account_name,
-            expired: row.expired === true,
             data: row.data,
+            expired: row.expired === true,
+            index: row.index,
         }));
     }
 
@@ -88,19 +88,17 @@ class PgAuthSource extends BaseAuthSource {
     }
 
     async _setExpiredFlag(index, expired) {
-        await this.pool.query(
-            "UPDATE aistudio_auth SET expired = $2, updated_at = NOW() WHERE index = $1",
-            [index, expired]
-        );
+        await this.pool.query("UPDATE aistudio_auth SET expired = $2, updated_at = NOW() WHERE index = $1", [
+            index,
+            expired,
+        ]);
     }
 
     async _allocateNextIndex() {
         const client = await this.pool.connect();
         try {
             await client.query("BEGIN");
-            const result = await client.query(
-                "SELECT COALESCE(MAX(index), -1) + 1 AS next FROM aistudio_auth"
-            );
+            const result = await client.query("SELECT COALESCE(MAX(index), -1) + 1 AS next FROM aistudio_auth");
             const nextIndex = result.rows[0].next;
             await client.query("COMMIT");
             return nextIndex;
